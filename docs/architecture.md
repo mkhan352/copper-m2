@@ -82,3 +82,35 @@ When a module changes how the app fits together, add a section here:
 **Risks and open questions:** cost, privacy, accuracy or safety risks, and how
 you handle them.
 ```
+
+## Module 2: Ask Copper
+
+**Summary:** Ask Copper is a floating chat panel that answers price and stock
+questions by calling tools (catalog lookups, a cost calculator and a stock
+check) instead of guessing. It also shows each step, so you can see what a tool
+is and what happens without one.
+
+| Piece | Where | What it does |
+|---|---|---|
+| Page / route | `app/page.tsx` | Still one page. Passes `isAiConfigured()` to the panel; no new route |
+| Components | `components/copper/ask-copper.tsx`, `ask-copper-answer.tsx` | The launcher, side panel, two separate chats (tools on and off) and the station-by-station answer |
+| Server Action | `lib/copper/assistant/ask.ts` | `askCopper()` returns a live `Progress` right away and fills it in from the model's stream |
+| Tools | `lib/copper/assistant/tools.ts` | `get_products`, `get_prices`, `calculate_cost`, `check_availability`; prices come from the catalog, stock from `readInventory()` |
+| Instructions | `lib/copper/assistant/instructions.ts` | Copper's voice and rules, sent only when tools are on |
+| Data | `lib/copper/data/inventory.json` | Stock list, read fresh on every availability check |
+| AI calls | `lib/ai/call.ts` (module 2, `ask-copper`) | `callStream` with thought summaries, up to 5 steps; cost and time logged to `ai_calls` |
+
+**Data flow:** shopper question → panel → `askCopper()` → `callStream` → model →
+(tool call → tool code → catalog or stock list → result back to the model) →
+streamed steps and reply → `readLive()` → panel.
+
+**Decisions and trade-offs:** tools-off sends no instructions and no tools, so
+the comparison shows the same model with nothing telling it to check. The two
+chats keep separate histories, so the tools-off model can't copy an answer the
+tools worked out. A Server Action with a live value keeps the site to one page,
+at the cost of a custom stream type instead of an API route.
+
+**Risks and open questions:** with tools off, Copper can state invented prices
+as fact, so the panel labels those answers. Stock is read from a JSON file for
+now, so it only changes when the file does. Each question costs a few model
+steps; the cost is logged per call.
