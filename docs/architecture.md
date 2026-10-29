@@ -100,7 +100,7 @@ is and what happens without one.
 | Server Action | `lib/copper/assistant/ask.ts` | `askCopper()` returns a live `Progress` right away and fills it in from the model's stream |
 | Tools | `lib/copper/assistant/tools.ts` | `get_products`, `get_prices`, `calculate_cost`, `check_availability`; prices come from the catalog, stock from `readInventory()` |
 | Instructions | `lib/copper/assistant/instructions.ts` | Copper's voice and rules, sent only when tools are on |
-| Data | `lib/copper/data/inventory.json` | Stock list, read fresh on every availability check |
+| Data | Supabase `inventory` table (`supabase/migrations/`) | Stock list, read fresh on every availability check by `readInventory()` |
 | AI calls | `lib/ai/call.ts` (module 2, `ask-copper`) | `callStream` with thought summaries, up to 5 steps; cost and time logged to `ai_calls` |
 
 **Data flow:** shopper question → panel → `askCopper()` → `callStream` → model →
@@ -114,6 +114,7 @@ tools worked out. A Server Action with a live value keeps the site to one page,
 at the cost of a custom stream type instead of an API route.
 
 **Risks and open questions:** with tools off, Copper can state invented prices
-as fact, so the panel labels those answers. Stock is read from a JSON file for
-now, so it only changes when the file does. Each question costs a few model
+as fact, so the panel labels those answers. Stock is read from a Supabase table, so
+it changes the moment a row is edited. If the table can't be read, Copper says
+stock can't be checked instead of guessing. Each question costs a few model
 steps; the cost is logged per call.
